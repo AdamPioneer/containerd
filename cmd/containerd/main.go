@@ -28,8 +28,12 @@ func init() {
 	seed.WithTimeAndRand()
 }
 
+//containerd 守护进程入口
 func main() {
+	//函数主要功能就是使用urfave/cli命令行框架创建containerd命令行实例并运行
+	//cmd/containerd/command/main.go 69
 	app := command.App()
+	//vendor/githubicom/urfave/cli/app.go:191
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "containerd: %s\n", err)
 		os.Exit(1)
