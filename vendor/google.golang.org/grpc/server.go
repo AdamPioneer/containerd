@@ -852,6 +852,7 @@ func (s *Server) sendResponse(t transport.ServerTransport, stream *transport.Str
 	return err
 }
 
+//grpc主要处理函数
 func (s *Server) processUnaryRPC(t transport.ServerTransport, stream *transport.Stream, srv *service, md *MethodDesc, trInfo *traceInfo) (err error) {
 	if channelz.IsOn() {
 		s.incrCallsStarted()
@@ -992,6 +993,7 @@ func (s *Server) processUnaryRPC(t transport.ServerTransport, stream *transport.
 		return nil
 	}
 	ctx := NewContextWithServerTransportStream(stream.Context(), stream)
+	////这些我们注册的函数, 在grpc.ServiceDesc中注册的方法，这个一般在对应 *.pb.go中定义
 	reply, appErr := md.Handler(srv.server, ctx, df, s.opts.unaryInt)
 	if appErr != nil {
 		appStatus, ok := status.FromError(appErr)
@@ -1272,7 +1274,7 @@ func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Str
 	srv, knownService := s.m[service]
 	if knownService {
 		if md, ok := srv.md[method]; ok {
-			s.processUnaryRPC(t, stream, srv, md, trInfo)
+			s.processUnaryRPC(t, stream, srv, md, trInfo) //grpc主要处理函数
 			return
 		}
 		if sd, ok := srv.sd[method]; ok {

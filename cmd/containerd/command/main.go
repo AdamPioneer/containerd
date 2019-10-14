@@ -66,9 +66,10 @@ func init() {
 
 // App returns a *cli.App instance.
 func App() *cli.App {
+	//实例化一个命令行程序
 	app := cli.NewApp()
 	app.Name = "containerd"
-	app.Version = version.Version
+	app.Version = version.Version //设置版本号，在version package中定义
 	app.Usage = usage
 	app.Description = `
 containerd is a high performance container runtime whose daemon can be started
@@ -81,11 +82,12 @@ A default configuration is used if no TOML configuration is specified or located
 at the default file location. The *containerd config* command can be used to
 generate the default configuration for containerd. The output of that command
 can be used and modified as necessary as a custom configuration.`
+	//设置启动参数，配置了5个启动参数
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "config,c",
 			Usage: "path to the configuration file",
-			Value: defaultConfigPath,
+			Value: defaultConfigPath, //cmd\containerd\command\main_unix.go 默认值
 		},
 		cli.StringFlag{
 			Name:  "log-level,l",
@@ -105,20 +107,24 @@ can be used and modified as necessary as a custom configuration.`
 		},
 	}
 	app.Flags = append(app.Flags, serviceFlags()...)
+	//定义containerd 命令， 定义了config publish oci-hook三个命令
 	app.Commands = []cli.Command{
-		configCommand,
-		publishCommand,
-		ociHook,
+		configCommand,  //cmd/containerd/command/config.go:
+		publishCommand, //cmd/containerd/command/publish.go
+		ociHook,        //cmd/containerd/command/oci-hook.go
 	}
+
+	//程序执行入口代码
 	app.Action = func(context *cli.Context) error {
 		var (
 			start   = time.Now()
 			signals = make(chan os.Signal, 2048)
 			serverC = make(chan *server.Server, 1)
 			ctx     = gocontext.Background()
-			config  = defaultConfig()
+			config  = defaultConfig() //获取默认配置，配置定义在 defaults/*
 		)
 
+		//在 启动参数mapping表中查找config对应的配置，默认返回/etc/containerd/config.toml
 		if err := srvconfig.LoadConfig(context.GlobalString("config"), config); err != nil && !os.IsNotExist(err) {
 			return err
 		}
@@ -129,6 +135,7 @@ can be used and modified as necessary as a custom configuration.`
 		}
 
 		// Make sure top-level directories are created early.
+		//services/server/server.go
 		if err := server.CreateTopLevelDirectories(config); err != nil {
 			return err
 		}
@@ -142,9 +149,11 @@ can be used and modified as necessary as a custom configuration.`
 			return nil
 		}
 
+		//启动信号和serverC监控协程
 		done := handleSignals(ctx, signals, serverC)
 		// start the signal handler as soon as we can to make sure that
 		// we don't miss any signals during boot
+		//将handledSignals定义的输入信号转发到signas
 		signal.Notify(signals, handledSignals...)
 
 		// cleanup temp mounts
@@ -174,18 +183,23 @@ can be used and modified as necessary as a custom configuration.`
 			"revision": version.Revision,
 		}).Info("starting containerd")
 
+		// services/server/server.go
+		//遍历plugins
+		//创建两个grpc服务grpcServer tcpServer
+		//创建一个ttrpc服务ttrpcServer
 		server, err := server.New(ctx, config)
 		if err != nil {
 			return err
 		}
 
-		// Launch as a Windows Service if necessary
+		// Launch as a Windows Service if necessary /只在windows上有效
 		if err := launchService(server, done); err != nil {
 			logrus.Fatal(err)
 		}
 
 		serverC <- server
 
+		//开启debug 服务
 		if config.Debug.Address != "" {
 			var l net.Listener
 			if filepath.IsAbs(config.Debug.Address) {
@@ -199,6 +213,7 @@ can be used and modified as necessary as a custom configuration.`
 			}
 			serve(ctx, l, server.ServeDebug)
 		}
+		//开启metrics 服务
 		if config.Metrics.Address != "" {
 			l, err := net.Listen("tcp", config.Metrics.Address)
 			if err != nil {
@@ -206,6 +221,8 @@ can be used and modified as necessary as a custom configuration.`
 			}
 			serve(ctx, l, server.ServeMetrics)
 		}
+
+		//开启ttrpc 服务
 		// setup the ttrpc endpoint
 		tl, err := sys.GetLocalListener(config.TTRPC.Address, config.TTRPC.UID, config.TTRPC.GID)
 		if err != nil {
@@ -213,6 +230,7 @@ can be used and modified as necessary as a custom configuration.`
 		}
 		serve(ctx, tl, server.ServeTTRPC)
 
+		//开启tcp 服务
 		if config.GRPC.TCPAddress != "" {
 			l, err := net.Listen("tcp", config.GRPC.TCPAddress)
 			if err != nil {
@@ -220,6 +238,8 @@ can be used and modified as necessary as a custom configuration.`
 			}
 			serve(ctx, l, server.ServeTCP)
 		}
+
+		//开启grpc 服务
 		// setup the main grpc endpoint
 		l, err := sys.GetLocalListener(config.GRPC.Address, config.GRPC.UID, config.GRPC.GID)
 		if err != nil {
@@ -228,6 +248,7 @@ can be used and modified as necessary as a custom configuration.`
 		serve(ctx, l, server.ServeGRPC)
 
 		log.G(ctx).Infof("containerd successfully booted in %fs", time.Since(start).Seconds())
+		//阻塞等待读done， done channel在 handleSignals定义，没有使用
 		<-done
 		return nil
 	}

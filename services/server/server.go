@@ -85,6 +85,7 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 		}
 		timeout.Set(key, d)
 	}
+	//解析出所有的plugin
 	plugins, err := LoadPlugins(ctx, config)
 	if err != nil {
 		return nil, err
@@ -103,6 +104,8 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 	if config.GRPC.MaxSendMsgSize > 0 {
 		serverOpts = append(serverOpts, grpc.MaxSendMsgSize(config.GRPC.MaxSendMsgSize))
 	}
+
+	//新建一个ttrpc server
 	ttrpcServer, err := newTTRPCServer()
 	if err != nil {
 		return nil, err
@@ -117,6 +120,7 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 		tcpServerOpts = append(tcpServerOpts, grpc.Creds(creds))
 	}
 	var (
+		//新建两个grpc server
 		grpcServer = grpc.NewServer(serverOpts...)
 		tcpServer  = grpc.NewServer(tcpServerOpts...)
 
@@ -137,7 +141,7 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 	for _, r := range config.RequiredPlugins {
 		required[r] = struct{}{}
 	}
-	for _, p := range plugins {
+	for _, p := range plugins { //遍历plugins
 		id := p.URI()
 		reqID := id
 		if config.GetVersion() == 1 {
@@ -206,16 +210,24 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 
 	// register services after all plugins have been initialized
 	for _, service := range grpcServices {
+		//vender/github.com/containerd/cri/pkg/server/service.go Register
+		//最终调用到grpc服务注册函数注册grpc服务
+		//RegisterRuntimeServiceServer
+		//RegisterImageServiceServer
+		//vendor/k8s.io/cri-api/pkg/apis/runtime/vlalpha2/api.pb.go
 		if err := service.Register(grpcServer); err != nil {
 			return nil, err
 		}
 	}
 	for _, service := range ttrpcServices {
+		//api/services/ttrpc/events/v1/events.pb.go
+		//RegisterEventsService
 		if err := service.RegisterTTRPC(ttrpcServer); err != nil {
 			return nil, err
 		}
 	}
 	for _, service := range tcpServices {
+		//和grpc注册同样的服务
 		if err := service.RegisterTCP(tcpServer); err != nil {
 			return nil, err
 		}
