@@ -120,7 +120,7 @@ var Command = cli.Command{
 			Usage: "run image for specific platform",
 		},
 	}, append(platformRunFlags, append(commands.SnapshotterFlags, commands.ContainerFlags...)...)...),
-	Action: func(context *cli.Context) error {
+	Action: func(context *cli.Context) error { //ctr run 命令函数入口
 		var (
 			err error
 			id  string
@@ -147,12 +147,19 @@ var Command = cli.Command{
 		if id == "" {
 			return errors.New("container id must be provided")
 		}
+		//cmd/ctr/commands/client.go NewClient
+		//创建新的client 最终调用到containerd根目录下的client.go 的New函数实现创建并建立和服务端的grpc连接
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
 			return err
 		}
 		defer cancel()
-		container, err := NewContainer(ctx, client, context)
+		//cmd/ctr/commands/run/run_unix.go
+		//调用到根目录下的client.go NewContainer
+		//调用到根目录下的containerstore.go Create created, err := r.client.Create(
+		//这里就会调用grpc client api Create 发起GRPC
+		//api/services/containers/v1/container.pb.go:727 Create调用grpc client 端API
+		container, err := NewContainer(ctx, client, context) //
 		if err != nil {
 			return err
 		}
@@ -169,6 +176,12 @@ var Command = cli.Command{
 		}
 		opts := getNewTaskOpts(context)
 		ioOpts := []cio.Opt{cio.WithFIFODir(context.String("fifo-dir"))}
+		//cmd/ctr/commands/task/task_unix.go NewTask
+		//调用到根目录下的container.go NewTask
+		//response, err := c.client.TaskService().Create(ctx, request)
+		//TaskService调用到根目录下的client.go TaskService 这个会调用tasks.NewTasksClient(c.conn)
+		//调用api/services/tasks/v1/tasks.pb.go NewTasksClient
+		//最后调用api/services/tasks/v1/tasks.pb.go create 调用grpc的client API 创建新的task
 		task, err := tasks.NewTask(ctx, client, container, context.String("checkpoint"), con, context.Bool("null-io"), context.String("log-uri"), ioOpts, opts...)
 		if err != nil {
 			return err
@@ -185,6 +198,7 @@ var Command = cli.Command{
 				return err
 			}
 		}
+		////最后调用api/services/tasks/v1/tasks.pb.go Start 调用grpc创建新的task
 		if err := task.Start(ctx); err != nil {
 			return err
 		}

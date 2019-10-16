@@ -177,6 +177,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 
 	// oci.WithImageConfig (WithUsername, WithUserID) depends on access to rootfs for resolving via
 	// the /etc/{passwd,group} files. So cOpts needs to have precedence over opts.
+	//调用到根目录下的client.go NewContainer
 	return client.NewContainer(ctx, id, cOpts...)
 }
 

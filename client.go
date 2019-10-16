@@ -78,6 +78,7 @@ func init() {
 
 // New returns a new containerd client that is connected to the containerd
 // instance provided by address
+//调用client New 创建一个新的client并建立到服务端的连接， address是grpc的address
 func New(address string, opts ...ClientOpt) (*Client, error) {
 	var copts clientOpts
 	for _, o := range opts {

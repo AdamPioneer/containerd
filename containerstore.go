@@ -107,6 +107,7 @@ func (r *remoteContainers) stream(ctx context.Context, filters ...string) ([]con
 }
 
 func (r *remoteContainers) Create(ctx context.Context, container containers.Container) (containers.Container, error) {
+	//发起GRPC API Create
 	created, err := r.client.Create(ctx, &containersapi.CreateContainerRequest{
 		Container: containerToProto(&container),
 	})

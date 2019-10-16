@@ -46,6 +46,7 @@ import (
 
 // TODO(random-liu): Use github.com/pkg/errors for our errors.
 // Register CRI service plugin
+//CRI 插件init函数接口
 func init() {
 	config := criconfig.DefaultConfig()
 	plugin.Register(&plugin.Registration{

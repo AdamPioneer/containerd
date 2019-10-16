@@ -282,6 +282,9 @@ func (c *container) NewTask(ctx context.Context, ioCreate cio.Creator, opts ...N
 	if info.Checkpoint != nil {
 		request.Checkpoint = info.Checkpoint
 	}
+	//调用client.go TaskService
+	//调用api/services/tasks/v1/tasks.pb.go NewTasksClient 返回task service 为后面调用create提供service
+	//最后调用api/services/tasks/v1/tasks.pb.go create 这里就是调用grpc的client端API
 	response, err := c.client.TaskService().Create(ctx, request)
 	if err != nil {
 		return nil, errdefs.FromGRPC(err)

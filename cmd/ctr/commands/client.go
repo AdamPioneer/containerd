@@ -49,6 +49,7 @@ func AppContext(context *cli.Context) (gocontext.Context, gocontext.CancelFunc) 
 func NewClient(context *cli.Context, opts ...containerd.ClientOpt) (*containerd.Client, gocontext.Context, gocontext.CancelFunc, error) {
 	timeoutOpt := containerd.WithTimeout(context.GlobalDuration("connect-timeout"))
 	opts = append(opts, timeoutOpt)
+	//这里会调用./client.go 中的New
 	client, err := containerd.New(context.GlobalString("address"), opts...)
 	if err != nil {
 		return nil, nil, nil, err
