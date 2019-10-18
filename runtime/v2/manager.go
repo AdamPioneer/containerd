@@ -115,6 +115,7 @@ func (m *TaskManager) ID() string {
 }
 
 // Create a new task
+//runtime V2的create函数
 func (m *TaskManager) Create(ctx context.Context, id string, opts runtime.CreateOpts) (_ runtime.Task, err error) {
 	ns, err := namespaces.NamespaceRequired(ctx)
 	if err != nil {
@@ -135,6 +136,7 @@ func (m *TaskManager) Create(ctx context.Context, id string, opts runtime.Create
 	}
 
 	b := shimBinary(ctx, bundle, opts.Runtime, m.containerdAddress, m.containerdTTRPCAddress, m.events, m.tasks)
+	//其实shim函数 定义在runtime/v2/binary go
 	shim, err := b.Start(ctx, topts, func() {
 		log.G(ctx).WithField("id", id).Info("shim disconnected")
 		_, err := m.tasks.Get(ctx, id)

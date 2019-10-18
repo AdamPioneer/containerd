@@ -51,6 +51,7 @@ func init() {
 
 // RunPodSandbox creates and starts a pod-level sandbox. Runtimes should ensure
 // the sandbox is in ready state.
+//GRPC RunPodSandbox函数会调用到这里
 func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandboxRequest) (_ *runtime.RunPodSandboxResponse, retErr error) {
 	config := r.GetConfig()
 	log.G(ctx).Debugf("Sandbox config %+v", config)
@@ -249,7 +250,8 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 
 	taskOpts := c.taskOpts(ociRuntime.Type)
 	// We don't need stdio for sandbox container.
-	task, err := container.NewTask(ctx, containerdio.NullIO, taskOpts...)
+	//NewTask 定义在根目录container.go 
+	task, err := container.NewTask(ctx containerdio.NullIO, taskOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create containerd task")
 	}

@@ -131,6 +131,7 @@ type local struct {
 	v2Runtime *v2.TaskManager
 }
 
+//task 服务的Create
 func (l *local) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.CallOption) (*api.CreateTaskResponse, error) {
 	container, err := l.getContainer(ctx, r.ContainerID)
 	if err != nil {
@@ -195,6 +196,7 @@ func (l *local) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.
 	if err == nil {
 		return nil, errdefs.ToGRPC(fmt.Errorf("task %s already exists", r.ContainerID))
 	}
+	//rtime.Create定在runtime/v2/manager.go 调用runtime的函数
 	c, err := rtime.Create(ctx, r.ContainerID, opts)
 	if err != nil {
 		return nil, errdefs.ToGRPC(err)

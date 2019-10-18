@@ -62,6 +62,10 @@ func (b *binary) Start(ctx context.Context, opts *types.Any, onClose func()) (_ 
 	}
 	args = append(args, "start")
 
+	/*
+	   #这里的client是runtime/v2/shim
+	   #Command定义在runtime/v2/shim/util.go
+	*/
 	cmd, err := client.Command(
 		ctx,
 		b.runtime,
@@ -94,6 +98,7 @@ func (b *binary) Start(ctx context.Context, opts *types.Any, onClose func()) (_ 
 			log.G(ctx).WithError(err).Error("copy shim log")
 		}
 	}()
+	//调用CombinedOutput启动命令，
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s", out)

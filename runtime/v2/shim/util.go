@@ -38,6 +38,7 @@ import (
 var runtimePaths sync.Map
 
 // Command returns the shim command with the provided args and configuration
+//shim 启动命令函数
 func Command(ctx context.Context, runtime, containerdAddress, containerdTTRPCAddress, path string, opts *types.Any, cmdArgs ...string) (*exec.Cmd, error) {
 	ns, err := namespaces.NamespaceRequired(ctx)
 	if err != nil {
@@ -93,6 +94,8 @@ func Command(ctx context.Context, runtime, containerdAddress, containerdTTRPCAdd
 		}
 	}
 
+	//启动shim v2 进程
+	//cmdPath指定的就是shim的绝对路径,例如/usr/bin/containerd-shim-kata-v2
 	cmd := exec.Command(cmdPath, args...)
 	cmd.Dir = path
 	cmd.Env = append(
@@ -113,6 +116,9 @@ func Command(ctx context.Context, runtime, containerdAddress, containerdTTRPCAdd
 
 // BinaryName returns the shim binary name from the runtime name,
 // empty string returns means runtime name is invalid
+//解析runtime程序名，取runtime名字中的后两个“.”隔开的字符串打印到shimBinaryFormat
+//shimBinaryFormat定义与util_unix.go(unix系列平台)
+//shimBinaryFormat = "containerd-shim-%s-%s"
 func BinaryName(runtime string) string {
 	// runtime name should format like $prefix.name.version
 	parts := strings.Split(runtime, ".")

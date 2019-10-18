@@ -285,6 +285,15 @@ func (c *container) NewTask(ctx context.Context, ioCreate cio.Creator, opts ...N
 	//调用client.go TaskService
 	//调用api/services/tasks/v1/tasks.pb.go NewTasksClient 返回task service 为后面调用create提供service
 	//最后调用api/services/tasks/v1/tasks.pb.go create 这里就是调用grpc的client端API
+	/*
+			#这里其实调用了两次子函数
+		#首先调用o.dlient.TaskService,这个定义在根目录client.go描到task服务
+		---->TaskService
+		----=tasks.NewTasksClient(c.conn)//这个会返回task服务的client
+
+		#然后调用o.client.TaskServiceO.Create的Create,这个定services/tasks/local.go
+
+	*/
 	response, err := c.client.TaskService().Create(ctx, request)
 	if err != nil {
 		return nil, errdefs.FromGRPC(err)
