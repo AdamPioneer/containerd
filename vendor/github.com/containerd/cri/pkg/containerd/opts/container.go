@@ -36,11 +36,12 @@ import (
 func WithNewSnapshot(id string, i containerd.Image) containerd.NewContainerOpts {
 	f := containerd.WithNewSnapshot(id, i)
 	return func(ctx context.Context, client *containerd.Client, c *containers.Container) error {
+		//f函数会创建 upper目录
 		if err := f(ctx, client, c); err != nil {
 			if !errdefs.IsNotFound(err) {
 				return err
 			}
-
+			//解压镜像？？？
 			if err := i.Unpack(ctx, c.Snapshotter); err != nil {
 				return errors.Wrap(err, "error unpacking image")
 			}
