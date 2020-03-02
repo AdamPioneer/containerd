@@ -297,7 +297,7 @@ func (s *snapshotter) createSnapshot(ctx context.Context, key, parent string, re
 	}
 
 	var m []mount.Mount
-	if err := update(ctx, s.db, func(tx *bolt.Tx) error {
+	if err := update(ctx, s.db, func(tx *bolt.Tx) error { //这里调用update 最终调用回调func,也就是会执行下面这部分代码
 		bkt, err := createSnapshotterBucket(tx, ns, s.name)
 		if err != nil {
 			return err

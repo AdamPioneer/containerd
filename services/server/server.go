@@ -168,6 +168,8 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 			}
 			initContext.Config = pc
 		}
+
+		//调用plugin 的Init函数
 		result := p.Init(initContext)
 		if err := initialized.Add(result); err != nil {
 			return nil, errors.Wrapf(err, "could not add plugin result to plugin set")

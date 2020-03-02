@@ -7601,7 +7601,9 @@ func _RuntimeService_Version_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-//RunPodSandbox GRPC 函数入口
+//RunPodSandbox GRPC 函数入口 入口
+//入口函数就是调用srv.(RuntimeServiceServer).RunPodSandbox
+//定义于vender/github.com/containerd/cri/pkg/server/sandbox_run.go
 func _RuntimeService_RunPodSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RunPodSandboxRequest)
 	if err := dec(in); err != nil {

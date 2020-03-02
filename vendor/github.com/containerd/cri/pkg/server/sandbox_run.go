@@ -51,9 +51,12 @@ func init() {
 
 // RunPodSandbox creates and starts a pod-level sandbox. Runtimes should ensure
 // the sandbox is in ready state.
+//_RuntimeService_RunPodSandbox_Handler
 //GRPC RunPodSandbox函数会调用到这里
 func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandboxRequest) (_ *runtime.RunPodSandboxResponse, retErr error) {
-	config := r.GetConfig()
+	//获取PodSandboxConfig配置信息，具体信息查看vendor/k8s.io/cri-api/pkg/apis/runtime/v1alpha2/api.pb.go
+	//GetConfig定义于vendor/k8s.io/cri-api/pkg/apis/runtime/v1alpha2/api.pb.go
+	config := r.GetConfig() //获取PodSandboxConfig配置信息
 	log.G(ctx).Debugf("Sandbox config %+v", config)
 
 	// Generate unique id and name for the sandbox and reserve the name.
@@ -66,6 +69,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	log.G(ctx).Debugf("Generated id %q for sandbox %q", id, name)
 	// Reserve the sandbox name to avoid concurrent `RunPodSandbox` request starting the
 	// same sandbox.
+	//记录sandbox NAME 和IDS
 	if err := c.sandboxNameIndex.Reserve(name, id); err != nil {
 		return nil, errors.Wrapf(err, "failed to reserve sandbox name %q", name)
 	}
@@ -82,6 +86,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 			ID:             id,
 			Name:           name,
 			Config:         config,
+			//api.pb.go中定义GetRuntimeHandler--》r.RuntimeHandler
 			RuntimeHandler: r.GetRuntimeHandler(),
 		},
 		sandboxstore.Status{
@@ -90,21 +95,25 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	)
 
 	// Ensure sandbox container image snapshot.
+	//获取镜像vender/gitbhub.com/containerd/cri/pkg/server/helpers.go
 	image, err := c.ensureImageExists(ctx, c.config.SandboxImage, config)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get sandbox image %q", c.config.SandboxImage)
 	}
+	//指向containerd config中配置的 sandbox_image
 	containerdImage, err := c.toContainerdImage(ctx, *image)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get image from containerd %q", image.ID)
 	}
 
+	//containerd config中配置的runtime_type = “io.containerd.kata.v2"
 	ociRuntime, err := c.getSandboxRuntime(config, r.GetRuntimeHandler())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get sandbox runtime")
 	}
 	log.G(ctx).Debugf("Use OCI %+v for sandbox %q", ociRuntime, id)
 
+	//创建net namespace
 	podNetwork := true
 	// Pod network is always needed on windows.
 	if goruntime.GOOS != "windows" &&
@@ -155,6 +164,8 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	// NOTE: sandboxContainerSpec SHOULD NOT have side
 	// effect, e.g. accessing/creating files, so that we can test
 	// it safely.
+	//填充 spec信息
+	//spec文件解析操作大部分在 oci/spec.go中实现
 	spec, err := c.sandboxContainerSpec(id, config, &image.ImageSpec.Config, sandbox.NetNSPath, ociRuntime.PodAnnotations)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate sandbox container spec")
@@ -180,7 +191,9 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 		containerd.WithContainerLabels(sandboxLabels),
 		containerd.WithContainerExtension(sandboxMetadataExtension, &sandbox.Metadata),
 		containerd.WithRuntime(ociRuntime.Type, runtimeOpts)}
-
+	
+	//调用到client.go 中的NewContainer函数
+	//?????作用是什么
 	container, err := c.client.NewContainer(ctx, id, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create containerd container")
@@ -196,6 +209,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}()
 
 	// Create sandbox container root directories.
+	//rootdir = "/var/lib/containerd/io.containerd.grpc.v1.cri" + sandbox + id
 	sandboxRootDir := c.getSandboxRootDir(id)
 	if err := c.os.MkdirAll(sandboxRootDir, 0755); err != nil {
 		return nil, errors.Wrapf(err, "failed to create sandbox root directory %q",
@@ -210,6 +224,8 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 			}
 		}
 	}()
+	//
+	//rootdir: /run/containerd/io.containerd.grpc.v1.cri/sandboxes/"id"
 	volatileSandboxRootDir := c.getVolatileSandboxRootDir(id)
 	if err := c.os.MkdirAll(volatileSandboxRootDir, 0755); err != nil {
 		return nil, errors.Wrapf(err, "failed to create volatile sandbox root directory %q",
@@ -251,6 +267,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	taskOpts := c.taskOpts(ociRuntime.Type)
 	// We don't need stdio for sandbox container.
 	//NewTask 定义在根目录container.go 
+	//这里会启动shim-v2应用程序
 	task, err := container.NewTask(ctx containerdio.NullIO, taskOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create containerd task")

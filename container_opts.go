@@ -151,10 +151,13 @@ func WithNewSnapshot(id string, i Image, opts ...snapshots.Opt) NewContainerOpts
 		}
 
 		parent := identity.ChainID(diffIDs).String()
+		//通过DefaultSnapshotter获取到overlay的snapshotter
 		c.Snapshotter, err = client.resolveSnapshotterName(ctx, c.Snapshotter)
 		if err != nil {
 			return err
 		}
+
+		//获取snapshoterr,
 		s, err := client.getSnapshotter(ctx, c.Snapshotter)
 		if err != nil {
 			return err
