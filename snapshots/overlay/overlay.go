@@ -37,10 +37,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+//init时将overlay 注册进plugin/plugin.go 的register
 func init() {
 	plugin.Register(&plugin.Registration{
 		Type: plugin.SnapshotPlugin,
 		ID:   "overlayfs",
+		//在plugin的Init函数中调用，得到一个snapshot 的Snapshotter interface
 		InitFn: func(ic *plugin.InitContext) (interface{}, error) {
 			ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
 			ic.Meta.Exports["root"] = ic.Root
@@ -374,6 +376,9 @@ func (o *snapshotter) createSnapshot(ctx context.Context, kind snapshots.Kind, k
 	}()
 
 	snapshotDir := filepath.Join(o.root, "snapshots")
+	//创建临时upper 和work工作目录
+	// /var/lib/containerd/io.**.overlayfs/snapshots/new-*/fs
+	// /var/lib/containerd/io.**.overlayfs/snapshots/new-*/workS
 	td, err = o.prepareDirectory(ctx, snapshotDir, kind)
 	if err != nil {
 		if rerr := t.Rollback(); rerr != nil {
@@ -412,6 +417,9 @@ func (o *snapshotter) createSnapshot(ctx context.Context, kind snapshots.Kind, k
 	}
 
 	path = filepath.Join(snapshotDir, s.ID)
+	//重命名为 s.ID的目录
+	// /var/lib/containerd/io.**.overlayfs/snapshots/s.ID/fs
+	// /var/lib/containerd/io.**.overlayfs/snapshots/s.ID/workS
 	if err = os.Rename(td, path); err != nil {
 		return nil, errors.Wrap(err, "failed to rename")
 	}
